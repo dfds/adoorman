@@ -5,9 +5,6 @@ trigger:
 
 steps:
   - bash: |
-      set -eu -o pipefail
-      sudo pip install setuptools
-      sudo pip install awscli
       make release BUILD_NUMBER=$(Build.BuildId)
     env:
       AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
