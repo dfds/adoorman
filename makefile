@@ -14,8 +14,8 @@ container:
 release: container
 	$(eval dockerlogin=$(shell sh -c "aws ecr get-login --no-include-email"))
 	eval $(dockerlogin)
-	docker tag $(IMAGE_NAME):latest $(registry_image_name)
-	docker push $(registry_image_name)
+	docker tag $(IMAGE_NAME):latest $(REGISTRY_IMAGE_NAME)
+	docker push $(REGISTRY_IMAGE_NAME)
 
 run:
 	cd src; npm start
