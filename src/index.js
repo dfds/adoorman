@@ -12,10 +12,13 @@ if (isPassThrough) {
     console.log("AD_GROUP environment variable NOT set - running as passthrough proxy.");
 }
 
-function getBearerTokenFrom(req) {
-    let authHeader = req.headers.authorization || "";
-    authHeader = authHeader.toString();
+function getJwtFrom(req) {
+    let authHeader = req.headers["x-amzn-oidc-data"];
+    if (authHeader) {
+        return authHeader.toString();
+    }
 
+    authHeader = (req.headers.authorization || "").toString();
     if (authHeader.startsWith("Bearer ") || authHeader.startsWith("bearer ")) {
         return authHeader.slice("Bearer ".length);
     }
@@ -28,7 +31,7 @@ function isAuthorized(req) {
         return true;
     }
 
-    const bearerToken = getBearerTokenFrom(req);
+    const bearerToken = getJwtFrom(req);
     
     if (bearerToken) {
         const payload = jwt.decode(bearerToken);
