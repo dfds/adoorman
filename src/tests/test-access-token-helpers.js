@@ -20,5 +20,6 @@ describe("request utils", function() {
             assert.equal(getAccessToken(req), null, "Expected to have null returned");
         });
 
+        
     });
 });

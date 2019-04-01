@@ -1,6 +1,6 @@
 const defaultTimeProvider = () => new Date();
 
-let timeProvider = defaultTimeProvider()
+let timeProvider = defaultTimeProvider;
 
 exports.timeProvider = timeProvider;
 exports.defaultTimeProvider = defaultTimeProvider;

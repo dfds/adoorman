@@ -1,4 +1,4 @@
-const { timeProvider } = require("./system-time");
+const { timeProvider } = require("./system-utils");
 
 exports.getAccessToken = function (req) {
     const accessTokenPropertyName = "x-amzn-oidc-accesstoken";
