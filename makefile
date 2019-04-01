@@ -19,3 +19,9 @@ release: container
 
 run:
 	cd src; npm start
+
+test: 
+	cd src; npm run test
+
+test-watch: 
+	cd src; npm run test:watch

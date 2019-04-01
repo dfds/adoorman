@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "mocha --reporter min tests/",
+    "test:watch": "mocha --reporter min --watch tests/"
   },
   "keywords": [],
   "author": "",

@@ -65,14 +65,3 @@ const proxyServer = http.createServer((req, res) => {
 });
 
 proxyServer.listen(port);
-
-// const realServer = http.createServer((req, res) => {
-//     res.writeHead(200, "OK", {
-//         "x-was-here": "real"
-//     });
-
-//     res.write("Response content from REAL server.");
-//     res.end();
-// });
-
-// realServer.listen(9322);
