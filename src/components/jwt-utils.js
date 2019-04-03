@@ -1,5 +1,5 @@
-const jwt = require('jsonwebtoken');
+// const jwt = require('jsonwebtoken');
 
-module.exports = function (inputJwt) {
-    return jwt.decode(inputJwt);
-};
+// module.exports = function (inputJwt) {
+//     return jwt.decode(inputJwt);
+// };

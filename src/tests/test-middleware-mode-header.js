@@ -1,25 +1,7 @@
-const mocha = require("mocha");
-const assert = require("assert");
-const middleware = require("../components/middleware-mode-header");
+import assert from "assert";
+import ModeHeaderMiddleware from "./../components/middleware-mode-header";
 
-describe("add mode-header middleware", function() {
-
-    it("adds expected header to response", function() {
-        let header = { };
-
-        const requestDummy = { };
-        const responseSpy = {
-            setHeader: (key, value) => header =  { key: key, value: value}
-        };
-        const nextCallbackDummy = () => { };
-
-        const sut = middleware();
-        sut(requestDummy, responseSpy, nextCallbackDummy);
-
-        const expected = { key: "x-adoorman-mode", value: "passthrough" };
-        
-        assert.deepEqual(header, expected, `Expected header ${JSON.stringify(expected)} but got ${JSON.stringify(header)}`);
-    });
+describe("ModeHeaderMiddleware", () => {
 
     it("invokes the next middleware component", function () {
         let wasNextInvoked = false;
@@ -28,10 +10,27 @@ describe("add mode-header middleware", function() {
         const responseDummy = { setHeader: () => {} };
         const nextCallbackSpy = () => { wasNextInvoked = true };
 
-        const sut = middleware();
-        sut(requestDummy, responseDummy, nextCallbackSpy);
+        const sut = new ModeHeaderMiddleware();
+        sut.handle(requestDummy, responseDummy, nextCallbackSpy);
 
         assert.equal(wasNextInvoked, true, "Expected next callback to be invoked.");
+    });
+
+    it("adds expected header to response", () => {
+        let header = { };
+
+        const requestDummy = { };
+        const responseSpy = {
+            setHeader: (key, value) => header =  { key: key, value: value}
+        };
+        const nextCallbackDummy = () => { };
+
+        const sut = new ModeHeaderMiddleware();
+        sut.handle(requestDummy, responseSpy, nextCallbackDummy);
+
+        const expected = { key: "x-adoorman-mode", value: "passthrough" };
+        
+        assert.deepEqual(header, expected, `Expected header ${JSON.stringify(expected)} but got ${JSON.stringify(header)}`);
     });
 
     it("invokes the next middleware component BEFORE setting the response header", function () {
@@ -41,8 +40,8 @@ describe("add mode-header middleware", function() {
         const responseSpy = { setHeader: () => callbackOrder.push("setHeader") };
         const nextCallbackSpy = () => { callbackOrder.push("next") };
 
-        const sut = middleware();
-        sut(requestDummy, responseSpy, nextCallbackSpy);
+        const sut = new ModeHeaderMiddleware();
+        sut.handle(requestDummy, responseSpy, nextCallbackSpy);
 
         const expectedCallbackOrder = ["next", "setHeader"];
         assert.deepEqual(callbackOrder, expectedCallbackOrder, "Expected next to be invoked first");

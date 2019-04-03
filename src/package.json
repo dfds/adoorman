@@ -4,17 +4,25 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "test": "mocha --reporter min tests/",
-    "test:watch": "mocha --reporter min --watch tests/"
+    "build": "babel index.js -d dist",
+    "start": "npm run build && node dist/index.js",
+    "test": "mocha --require @babel/register --reporter spec tests/",
+    "test:watch": "mocha --require @babel/register --reporter min --watch tests/"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "mocha": "^6.0.2"
+    "@babel/cli": "^7.2.3",
+    "@babel/core": "^7.4.0",
+    "@babel/preset-env": "^7.4.2",
+    "@babel/register": "^7.4.0",
+    "mocha": "^6.0.2",
+    "nodemon": "^1.18.10"
   },
   "dependencies": {
+    "connect": "^3.6.6",
+    "cookies": "^0.7.3",
     "http-proxy": "^1.17.0",
     "jsonwebtoken": "^8.5.1"
   }
