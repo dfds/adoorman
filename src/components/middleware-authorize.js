@@ -10,12 +10,14 @@ export default class AuthorizeMiddleware {
         
         this.isPassthrough = cfg.isPassthrough;
         this.authorizationService = cfg.authorizationService;
+        this.requestUtils = cfg.requestUtils;
 
         this.handle = this.handle.bind(this);
 
         this.hasAuthorizationCookie = this.hasAuthorizationCookie.bind(this);
         this.attachCookie = this.attachCookie.bind(this);
         this.sendRejectResponse = this.sendRejectResponse.bind(this);
+        this.isAuthorized = this.isAuthorized.bind(this);
     }
 
     hasAuthorizationCookie(req) {
@@ -23,9 +25,11 @@ export default class AuthorizeMiddleware {
     }
 
     attachCookie(req, res) {
+        const identity = this.requestUtils.getIdentityFrom(req);
+        const accessToken = this.requestUtils.getAccessTokenFrom(req);
+
         const cookies = new Cookies(req, res, { secure: true });
-        cookies.set("foo", "bar");
-        cookies.set("baz", "qux");
+        cookies.set(identity, accessToken);
     }
     
     sendRejectResponse(res) {
@@ -34,27 +38,19 @@ export default class AuthorizeMiddleware {
         res.end();
     }
 
-    handle(req, res, next) {
+    isAuthorized(req) {
+        return this.authorizationService.isAuthorized(req);
+    }
 
+    handle(req, res, next) {
         if (this.isPassthrough) {
             next();
-            return;
-        }
-
-        if (this.authorizationService.isAuthorized()) {
+        } else if (this.isAuthorized(req)) {
             next();
             this.attachCookie(req, res);
-            return;
+        } else {
+            this.sendRejectResponse(res);
         }
-
-        this.sendRejectResponse(res);
-
-        // if (this.isPassthrough || this.hasAuthorizationCookie(req) || this.isMemberOfGroups()) {
-        //     next();
-        //     this.attachCookie(res);
-        // } else {
-        //     this.sendRejectResponse(res);
-        // }
     }
 }
 

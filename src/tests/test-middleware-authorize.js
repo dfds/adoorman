@@ -22,6 +22,35 @@ const responseBuilder = (options) => {
     return {...defaults, ...options};
 };
 
+const sutBuilder = (options) => {
+    const defaultValues = {
+        isPassthrough: false,
+        isAuthorized: false,
+        identity: "foo-identity",
+        accessToken: "foo-access-token"
+    };
+
+    options = {...defaultValues, ...options};
+
+    const defaultDependencies = {
+        authorizationService: { 
+            isAuthorized: () => options.isAuthorized 
+        },
+        requestUtils: { 
+            getIdentityFrom: () => options.identity,
+            getAccessTokenFrom: () => options.accessToken
+        }        
+    };
+
+    options = {...defaultDependencies, ...options};
+
+    return new AuthorizeMiddleware({ 
+        isPassthrough: options.isPassthrough,
+        authorizationService: options.authorizationService,
+        requestUtils: options.requestUtils
+    });
+};
+
 describe("AuthorizeMiddleware", () => {
 
     it("invokes next on passthrough", () => {
@@ -43,16 +72,21 @@ describe("AuthorizeMiddleware", () => {
         const resDummy = responseBuilder();
         const nextDummy = () => {};
 
-        let wasAuthorizationServiceInvoked = false;
+        const authorizationServiceSpy = {
+            _wasInvoked: false,
+            isAuthorized: function(req) { 
+                this._wasInvoked = true;
+            },
+        };
 
-        const sut = new AuthorizeMiddleware({ 
+        const sut = sutBuilder({
             isPassthrough: false,
-            authorizationService: { isAuthorized: () => wasAuthorizationServiceInvoked = true }
+            authorizationService: authorizationServiceSpy
         });
-        
+
         sut.handle(reqDummy, resDummy, nextDummy);
 
-        assert.equal(wasAuthorizationServiceInvoked, true, "Expected authorization service to be invoked");
+        assert.equal(authorizationServiceSpy._wasInvoked, true, "Expected authorization service to be invoked");
     });
 
     it("invokes next when authorized", () => {
@@ -64,7 +98,8 @@ describe("AuthorizeMiddleware", () => {
 
         const sut = new AuthorizeMiddleware({ 
             isPassthrough: false,
-            authorizationService: { isAuthorized: () => true }
+            authorizationService: { isAuthorized: () => true },
+            requestUtils: { getIdentityFrom: () => "dummy-identity" }
         });
         
         sut.handle(reqDummy, resDummy, nextSpy);
@@ -114,11 +149,12 @@ describe("AuthorizeMiddleware", () => {
         assert.equal(sentStatusCode, expectedStatusCode, `Expected sent status code to be ${expectedStatusCode} but got ${sentStatusCode}`);
     });
 
-    it("attaches a cookie to response when authorized", () => {
+    it("attatches a cookie to response when authorized", () => {
+        const stubIdentity = "foo-identity";
+        const stubAccessToken = "foo-access-token";
         const headers = [];
         const expected = [
-            { "Set-Cookie": ["foo=bar; path=/; secure; httponly"]},
-            { "Set-Cookie": ["baz=qux; path=/; secure; httponly"]},
+            { "Set-Cookie": [`${stubIdentity}=${stubAccessToken}; path=/; secure; httponly`]},
         ];
 
         const reqDummy = requestBuilder();
@@ -134,7 +170,11 @@ describe("AuthorizeMiddleware", () => {
 
         const sut = new AuthorizeMiddleware({ 
             isPassthrough: false,
-            authorizationService: { isAuthorized: () => true }
+            authorizationService: { isAuthorized: () => true },
+            requestUtils: { 
+                getIdentityFrom: (req) => stubIdentity,
+                getAccessTokenFrom: (req) => stubAccessToken
+            }
         });
         
         sut.handle(reqDummy, resSpy, nextDummy);
