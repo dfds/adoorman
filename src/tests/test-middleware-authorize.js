@@ -1,5 +1,18 @@
 import assert from "assert";
+import moment  from "moment";
 import AuthorizeMiddleware from "./../components/middleware-authorize";
+
+Date.prototype.addMinutes = function(minutes) {
+    const timestamp = this.getTime();
+    const newTimestamp = timestamp+(minutes*60*1000);
+    return new Date(newTimestamp);
+}
+
+Date.prototype.subtractMinutes = function(minutes) {
+    const timestamp = this.getTime();
+    const newTimestamp = timestamp-(minutes*60*1000);
+    return new Date(newTimestamp);
+}
 
 const requestBuilder = (options) => {
     const defaults = {
@@ -23,32 +36,24 @@ const responseBuilder = (options) => {
 };
 
 const sutBuilder = (options) => {
-    const defaultValues = {
+    const defaults = {
         isPassthrough: false,
-        isAuthorized: false,
-        identity: "foo-identity",
-        accessToken: "foo-access-token"
-    };
-
-    options = {...defaultValues, ...options};
-
-    const defaultDependencies = {
-        authorizationService: { 
-            isAuthorized: () => options.isAuthorized 
+        authorizationService: {
+            isAuthorized: () => false
         },
         requestUtils: { 
-            getIdentityFrom: () => options.identity,
-            getAccessTokenFrom: () => options.accessToken
-        }        
+            getIdentityFrom: () => "foo-identity",
+            getAccessTokenFrom: () => "foo-access-token"
+        },
+        timeProvider: {
+            now: () => new Date(),
+            addMinutes: () => new Date(),
+        }
     };
 
-    options = {...defaultDependencies, ...options};
+    options = {...defaults, ...options};
 
-    return new AuthorizeMiddleware({ 
-        isPassthrough: options.isPassthrough,
-        authorizationService: options.authorizationService,
-        requestUtils: options.requestUtils
-    });
+    return new AuthorizeMiddleware(options);
 };
 
 describe("AuthorizeMiddleware", () => {
@@ -56,7 +61,9 @@ describe("AuthorizeMiddleware", () => {
     it("invokes next on passthrough", () => {
         let wasNextInvoked = false;
 
-        const sut = new AuthorizeMiddleware({ isPassthrough: true });
+        const sut = sutBuilder({
+            isPassthrough: true
+        });
         
         const reqDummy = {};
         const resDummy = {};
@@ -96,10 +103,13 @@ describe("AuthorizeMiddleware", () => {
         const resDummy = responseBuilder();
         const nextSpy = () => wasNextInvoked = true;
 
-        const sut = new AuthorizeMiddleware({ 
+        const sut = sutBuilder({ 
             isPassthrough: false,
             authorizationService: { isAuthorized: () => true },
-            requestUtils: { getIdentityFrom: () => "dummy-identity" }
+            timeProvider: {
+                now: () => new Date(),
+                addMinutes: () => new Date(),
+            }
         });
         
         sut.handle(reqDummy, resDummy, nextSpy);
@@ -118,7 +128,7 @@ describe("AuthorizeMiddleware", () => {
         };
         const nextSpy = () => wasNextInvoked = true;
 
-        const sut = new AuthorizeMiddleware({ 
+        const sut = sutBuilder({ 
             isPassthrough: false,
             authorizationService: { isAuthorized: () => false }
         });
@@ -139,7 +149,7 @@ describe("AuthorizeMiddleware", () => {
 
         const nextDummy = () => {};
 
-        const sut = new AuthorizeMiddleware({ 
+        const sut = sutBuilder({ 
             isPassthrough: false,
             authorizationService: { isAuthorized: () => false }
         });
@@ -149,36 +159,51 @@ describe("AuthorizeMiddleware", () => {
         assert.equal(sentStatusCode, expectedStatusCode, `Expected sent status code to be ${expectedStatusCode} but got ${sentStatusCode}`);
     });
 
-    it("attatches a cookie to response when authorized", () => {
+    it("attaches expected cookie to response when authorized", () => {
         const stubIdentity = "foo-identity";
         const stubAccessToken = "foo-access-token";
-        const headers = [];
-        const expected = [
-            { "Set-Cookie": [`${stubIdentity}=${stubAccessToken}; path=/; secure; httponly`]},
+
+        const expectedExpirationDelayInMinutes = 10;
+        const expectedExpiration = new Date();
+        const expectedCookieElements = [
+            `${stubIdentity}=${stubAccessToken}`,
+            "path=/",
+            `expires=${expectedExpiration.toUTCString()}`,
+            "secure",
+            "httponly"
         ];
 
-        const reqDummy = requestBuilder();
+        const actualResponseHeaders = [];
         const resSpy = responseBuilder({
             setHeader: (name, value) => {
                 const result = {};
                 result[name] = value;
-                headers.push(result);
+                actualResponseHeaders.push(result);
             },
         });
 
-        const nextDummy = () => {};
-
-        const sut = new AuthorizeMiddleware({ 
+        const sut = sutBuilder({ 
             isPassthrough: false,
             authorizationService: { isAuthorized: () => true },
             requestUtils: { 
-                getIdentityFrom: (req) => stubIdentity,
-                getAccessTokenFrom: (req) => stubAccessToken
+                getIdentityFrom: () => stubIdentity,
+                getAccessTokenFrom: () => stubAccessToken
+            },
+            timeProvider: { 
+                now: () => expectedExpiration.subtractMinutes(expectedExpirationDelayInMinutes),
+                addMinutes: () => expectedExpiration
             }
         });
         
+        const reqDummy = requestBuilder();
+        const nextDummy = () => {};
+
         sut.handle(reqDummy, resSpy, nextDummy);
 
-        assert.deepEqual(headers, expected, `Expected ${JSON.stringify(expected, null, 2)} but got ${JSON.stringify(headers, null, 2)}`);
+        const expectedCookieHeader = [
+            { "Set-Cookie": [ expectedCookieElements.join("; ")]},
+        ];
+
+        assert.deepEqual(actualResponseHeaders, expectedCookieHeader, `Expected ${JSON.stringify(expectedCookieHeader)} but got ${JSON.stringify(actualResponseHeaders)}`);
     });
 });

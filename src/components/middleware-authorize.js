@@ -6,11 +6,12 @@ const defaultOptions = {
 
 export default class AuthorizeMiddleware {
     constructor(options) {
-        const cfg = {...defaultOptions, ...options};
+        options = {...defaultOptions, ...options};
         
-        this.isPassthrough = cfg.isPassthrough;
-        this.authorizationService = cfg.authorizationService;
-        this.requestUtils = cfg.requestUtils;
+        this.isPassthrough = options.isPassthrough;
+        this.authorizationService = options.authorizationService;
+        this.requestUtils = options.requestUtils;
+        this.timeProvider = options.timeProvider;
 
         this.handle = this.handle.bind(this);
 
@@ -28,8 +29,12 @@ export default class AuthorizeMiddleware {
         const identity = this.requestUtils.getIdentityFrom(req);
         const accessToken = this.requestUtils.getAccessTokenFrom(req);
 
+        const now = this.timeProvider.now();
+
         const cookies = new Cookies(req, res, { secure: true });
-        cookies.set(identity, accessToken);
+        cookies.set(identity, accessToken, {
+            expires: this.timeProvider.addMinutes(now, 10)
+        });
     }
     
     sendRejectResponse(res) {
