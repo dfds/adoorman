@@ -1,5 +1,3 @@
-import Cookies from "cookies";
-
 const defaultOptions = {
     isPassthrough: true,
 };
@@ -10,31 +8,32 @@ export default class AuthorizeMiddleware {
         
         this.isPassthrough = options.isPassthrough;
         this.authorizationService = options.authorizationService;
-        this.requestUtils = options.requestUtils;
-        this.timeProvider = options.timeProvider;
+        this.cookieUtils = options.cookieUtils;
 
         this.handle = this.handle.bind(this);
 
-        this.hasAuthorizationCookie = this.hasAuthorizationCookie.bind(this);
+        this.hasValidAuthorizationCookie = this.hasValidAuthorizationCookie.bind(this);
+        this.isAuthorized = this.isAuthorized.bind(this);
         this.attachCookie = this.attachCookie.bind(this);
         this.sendRejectResponse = this.sendRejectResponse.bind(this);
-        this.isAuthorized = this.isAuthorized.bind(this);
     }
 
-    hasAuthorizationCookie(req) {
-        return false;
+    hasValidAuthorizationCookie(req) {
+        return this.cookieUtils.hasValidAuthorizationCookie(req);
     }
 
     attachCookie(req, res) {
-        const identity = this.requestUtils.getIdentityFrom(req);
-        const accessToken = this.requestUtils.getAccessTokenFrom(req);
+        // const identity = this.requestUtils.getIdentityFrom(req);
+        // const accessToken = this.requestUtils.getAccessTokenFrom(req);
 
-        const now = this.timeProvider.now();
+        // const now = this.timeProvider.now();
 
-        const cookies = new Cookies(req, res, { secure: true });
-        cookies.set(identity, accessToken, {
-            expires: this.timeProvider.addMinutes(now, 10)
-        });
+        // const cookies = new Cookies(req, res, { secure: true });
+        // cookies.set(identity, accessToken, {
+        //     expires: this.timeProvider.addMinutes(now, 10)
+        // });
+
+        this.cookieUtils.attachCookie(req, res);
     }
     
     sendRejectResponse(res) {
@@ -50,7 +49,7 @@ export default class AuthorizeMiddleware {
     handle(req, res, next) {
         if (this.isPassthrough) {
             next();
-        } else if (this.isAuthorized(req)) {
+        } else if (this.hasValidAuthorizationCookie(req) || this.isAuthorized(req)) {
             next();
             this.attachCookie(req, res);
         } else {
