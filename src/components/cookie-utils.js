@@ -9,7 +9,10 @@ export default class CookieUtils {
         this.hasValidAuthorizationCookie = this.hasValidAuthorizationCookie.bind(this);
         this.getCookie = this.getCookie.bind(this);
         this.attachCookie = this.attachCookie.bind(this);
+        this.removeCookie = this.removeCookie.bind(this);
         this.composeCookieNameFrom = this.composeCookieNameFrom.bind(this);
+        this.composeCookieValueFrom = this.composeCookieValueFrom.bind(this);
+        this.extractExpirationDateFrom = this.extractExpirationDateFrom.bind(this);
     }
 
     getCookie(request, cookieName) {
@@ -26,6 +29,15 @@ export default class CookieUtils {
         return this.hashUtils.getHashOf(identity);
     }
 
+    composeCookieValueFrom(req) {
+        const accessToken = this.requestUtils.getAccessTokenFrom(req);
+        return this.hashUtils.getHashOf(accessToken);
+    }
+
+    extractExpirationDateFrom(req) {
+        return this.requestUtils.extractExpirationDateFrom(req);
+    }
+
     hasValidAuthorizationCookie(req) {
         const cookieName = this.composeCookieNameFrom(req);
         const cookie = this.getCookie(req, cookieName);
@@ -35,23 +47,25 @@ export default class CookieUtils {
 
     attachCookie(req, res) {
         const cookieName = this.composeCookieNameFrom(req);
-        const value = "";
-        const expiration = "";
+        const value = this.composeCookieValueFrom(req);
+        const expiration = this.extractExpirationDateFrom(req);
 
         const cookieJar = new Cookies(req, res, { secure: true });
         cookieJar.set(cookieName, value, { expires: expiration });
     }
 
-        // const identity = this.requestUtils.getIdentityFrom(req);
-        // const accessToken = this.requestUtils.getAccessTokenFrom(req);
+    removeCookie(req, res) {
+        const cookieName = this.composeCookieNameFrom(req);
+        const value = null;
+        const expiration = new Date(0);
 
-        // const now = this.timeProvider.now();
+        const cookieJar = new Cookies(req, res, { 
+            secure: true,
+        });
 
-        // const cookies = new Cookies(req, res, { secure: true });
-        // cookies.set(identity, accessToken, {
-        //     expires: this.timeProvider.addMinutes(now, 10)
-        // });
-
-        // this.cookieUtils.attachCookie(req, res);
-    
+        cookieJar.set(cookieName, value, {
+            expires: expiration,
+            overwrite: true
+        });
+    }    
 }

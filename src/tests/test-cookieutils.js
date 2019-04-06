@@ -19,11 +19,20 @@ const resBuilder = (options) => {
 const buildSut = (options) => {
 
     const defaults = {
-        requestUtils: { getIdentityFrom: () => null },
-        hashUtils: { getHashOf: () => null },
+        requestUtils: { 
+            getIdentityFrom: () => "dummy-identity",
+            getAccessTokenFrom: () => "dummy-access-token",
+            extractExpirationDateFrom: () => new Date()
+        },
+        hashUtils: { 
+            getHashOf: (input) => input
+        },
     };
 
     options = {...defaults, ...options};
+
+    options.requestUtils = {...defaults.requestUtils, ...options.requestUtils};
+    options.hashUtils = {...defaults.hashUtils, ...options.hashUtils};
 
     return new CookieUtils(options);
 };
@@ -101,89 +110,163 @@ describe("CookieUtils", () => {
 
     describe("attachCookie", () => {
         it("attaches cookie with expected name", () => {
+            const expected = "foo";
 
-            const expectedCookieName = "foo";
+            const hashUtilsPassthroughFake = {
+                getHashOf: (input) => input
+            };
 
             const sut = buildSut({
-                hashUtils: { getHashOf: () => expectedCookieName }
+                hashUtils: hashUtilsPassthroughFake,
+                requestUtils: {
+                    getIdentityFrom: () => expected,
+                }
             });
 
             const cookies = [];
 
             const req = reqBuilder({});
             const resSpy = resBuilder({
-                setHeader: (key, value) => {
-                    if (key != "Set-Cookie") {
-                        return
-                    }
-
-                    // const elements = value[0].split(";");
-                    // const result = {};
-                    // elements.forEach(x => {
-                    //     const pair = x.trim().split("=");
-                    //     const key = pair[0];
-                    //     const value = pair.length == 2 ? pair[1] : true;
-                    //     result[key] = value;
-                    // });
-                    // cookies.push(result);
-
-                    cookies.push("something lalala " + value[0]);
-                }
+                setHeader: (key, value) => cookies.push(value[0])
             });
 
             sut.attachCookie(req, resSpy);
 
-            const temp = cookies[0];
-            const result = temp.match(`^.*? path=.*?;.*?$`);
-            console.log(result);
+            // guard assert
+            assert.equal(cookies.length, 1, "Unexpected amount of cookies attached to response");
+
+            const cookieNameRegEx = new RegExp(/\s*(\w+)=.*/);
+            const result = cookieNameRegEx.exec(cookies[0]);
+
+            assert.equal(result[1], expected, "Unexpected name/format of cookie");
         });
+        it("attaches cookie with expected value", () => {
+            const expected = "foo";
 
-    // it("attaches expected cookie to response when authorized", () => {
-    //     const stubIdentity = "foo-identity";
-    //     const stubAccessToken = "foo-access-token";
+            const hashUtilsPassthroughFake = {
+                getHashOf: (input) => input
+            };
 
-    //     const expectedExpirationDelayInMinutes = 10;
-    //     const expectedExpiration = new Date();
-    //     const expectedCookieElements = [
-    //         `${stubIdentity}=${stubAccessToken}`,
-    //         "path=/",
-    //         `expires=${expectedExpiration.toUTCString()}`,
-    //         "secure",
-    //         "httponly"
-    //     ];
+            const sut = buildSut({
+                hashUtils: hashUtilsPassthroughFake,
+                requestUtils: {
+                    getAccessTokenFrom: () => expected
+                }
+            });
 
-    //     const actualResponseHeaders = [];
-    //     const resSpy = responseBuilder({
-    //         setHeader: (name, value) => {
-    //             const result = {};
-    //             result[name] = value;
-    //             actualResponseHeaders.push(result);
-    //         },
-    //     });
+            const cookies = [];
 
-    //     const sut = sutBuilder({ 
-    //         isPassthrough: false,
-    //         authorizationService: { isAuthorized: () => true },
-    //         requestUtils: { 
-    //             getIdentityFrom: () => stubIdentity,
-    //             getAccessTokenFrom: () => stubAccessToken
-    //         },
-    //         timeProvider: { 
-    //             now: () => expectedExpiration.subtractMinutes(expectedExpirationDelayInMinutes),
-    //             addMinutes: () => expectedExpiration
-    //         }
-    //     });
-        
-    //     const reqDummy = requestBuilder();
-    //     const nextDummy = () => {};
+            const req = reqBuilder({});
+            const resSpy = resBuilder({
+                setHeader: (key, value) => cookies.push(value[0])
+            });
 
-    //     sut.handle(reqDummy, resSpy, nextDummy);
+            sut.attachCookie(req, resSpy);
 
-    //     const expectedCookieHeader = [
-    //         { "Set-Cookie": [ expectedCookieElements.join("; ")]},
-    //     ];
+            // guard assert
+            assert.equal(cookies.length, 1, "Unexpected amount of cookies attached to response");
 
-    //     assert.deepEqual(actualResponseHeaders, expectedCookieHeader, `Expected ${JSON.stringify(expectedCookieHeader)} but got ${JSON.stringify(actualResponseHeaders)}`);
-    // });
+            const regEx = new RegExp(/.*?=(\w+).*/);
+            const result = regEx.exec(cookies[0]);
+
+            assert.equal(result[1], expected, "Unexpected value (or format) of cookie");
+        });
+        it("attaches cookie with expected expiration", () => {
+            const expectedExpirationDate = new Date();
+            const actualCookies = [];
+
+            const sut = buildSut({
+                requestUtils: {
+                    extractExpirationDateFrom: () => expectedExpirationDate
+                }
+            });
+
+            const req = reqBuilder({});
+            const resSpy = resBuilder({
+                setHeader: (key, value) => actualCookies.push(value[0])
+            });
+
+            sut.attachCookie(req, resSpy);
+
+            // guard assert
+            assert.equal(actualCookies.length, 1, "Unexpected amount of cookies attached to response");
+
+            const regEx = new RegExp(/.*?expires=(.*?);.*/);
+            const result = regEx.exec(actualCookies[0]);
+
+            assert.equal(result[1], expectedExpirationDate.toUTCString(), "Unexpected expiration (or format) of cookie");
+        });
+    });
+
+    describe("removeCookie", () => {
+        it("attaches cookie with expected name", () => {
+            const expected = "foo";
+
+            const sut = buildSut({
+                requestUtils: {
+                    getIdentityFrom: () => expected,
+                }
+            });
+
+            const cookies = [];
+
+            const req = reqBuilder({});
+            const resSpy = resBuilder({
+                setHeader: (key, value) => cookies.push(value[0])
+            });
+
+            sut.removeCookie(req, resSpy);
+
+            // guard assert
+            assert.equal(cookies.length, 1, "Unexpected amount of cookies attached to response");
+
+            const cookieNameRegEx = new RegExp(/\s*(.*?)=.*/);
+            const result = cookieNameRegEx.exec(cookies[0]);
+
+            assert.equal(result[1], expected, "Unexpected name/format of cookie");
+        });
+        it("attaches cookie with expected value", () => {
+            const expected = "";
+
+            const sut = buildSut({});
+
+            const cookies = [];
+
+            const req = reqBuilder({});
+            const resSpy = resBuilder({
+                setHeader: (key, value) => cookies.push(value[0])
+            });
+
+            sut.removeCookie(req, resSpy);
+
+            // guard assert
+            assert.equal(cookies.length, 1, "Unexpected amount of cookies attached to response");
+
+            const regEx = new RegExp(/.*?=(.*?);.*/);
+            const result = regEx.exec(cookies[0]);
+
+            assert.equal(result[1], expected, "Unexpected value (or format) of cookie");
+        });
+        it("attaches cookie with expected expiration", () => {
+            const expectedExpirationDate = new Date(0);
+            const actualCookies = [];
+
+            const sut = buildSut();
+
+            const req = reqBuilder({});
+            const resSpy = resBuilder({
+                setHeader: (key, value) => actualCookies.push(value[0])
+            });
+
+            sut.removeCookie(req, resSpy);
+
+            // guard assert
+            assert.equal(actualCookies.length, 1, "Unexpected amount of cookies attached to response");
+
+            const regEx = new RegExp(/.*?expires=(.*?);.*/);
+            const result = regEx.exec(actualCookies[0]);
+
+            assert.equal(result[1], expectedExpirationDate.toUTCString(), "Unexpected expiration (or format) of cookie");
+        });
     });
 });
