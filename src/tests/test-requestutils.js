@@ -93,18 +93,19 @@ describe("RequestUtils", () => {
         });
 
         it("returns expected when available", () => {
-            const expected = new Date();
+            const expirationAsUnixTimestampStub = Math.floor(new Date().getTime()/1000);
+            const expected = expirationAsUnixTimestampStub*1000;
 
             const sut = buildSut({
                 jwtUtils: { deserialize: () => {
-                    return { exp: Math.floor(expected.getTime()/1000) };
+                    return { exp: expirationAsUnixTimestampStub };
                 }}
             });
 
             const reqStub = reqBuilder();
             reqStub.setHeader(headerNames.jwt, "dummy-jwt");
 
-            const result = sut.extractExpirationDateFrom(reqStub);
+            const result = sut.extractExpirationDateFrom(reqStub).getTime();
 
             assert.equal(result, expected, `Expected "${expected}" but got "${result}"`);
         });
