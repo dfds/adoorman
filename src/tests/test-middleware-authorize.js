@@ -83,12 +83,7 @@ describe("AuthorizeMiddleware", () => {
         const nextDummy = () => {};
 
         let wasInvoked = false;
-
-        const authorizationServiceSpy = {
-            isAuthorized: function(req) { 
-                wasInvoked = true;
-            },
-        };
+        const authorizationServiceSpy = { isAuthorized: () => wasInvoked = true };
 
         const sut = sutBuilder({
             isPassthrough: false,
@@ -108,7 +103,6 @@ describe("AuthorizeMiddleware", () => {
         const nextSpy = () => wasNextInvoked = true;
 
         const sut = sutBuilder({
-            print: true,
             isPassthrough: false,
             authorizationService: { isAuthorized: () => true },
         });
@@ -215,10 +209,7 @@ describe("AuthorizeMiddleware", () => {
         let wasNextInvoked = false;
         const nextSpy = () => wasNextInvoked = true;
 
-        const cookieUtilsStub = { 
-            hasValidAuthorizationCookie: () => true,
-            attachCookie: () => { }
-        };
+        const cookieUtilsStub = { hasValidAuthorizationCookie: () => true };
 
         const sut = sutBuilder({ 
             isPassthrough: false,
@@ -236,15 +227,14 @@ describe("AuthorizeMiddleware", () => {
         const nextDummy = () => { };
         
         let wasCookieAttached = false;
-
-        const cookieUtilsStub = { 
+        const cookieUtilsSpy = { 
             hasValidAuthorizationCookie: () => true,
             attachCookie: () => wasCookieAttached = true
         };
 
         const sut = sutBuilder({ 
             isPassthrough: false,
-            cookieUtils: cookieUtilsStub
+            cookieUtils: cookieUtilsSpy
         });
 
         sut.handle(reqDummy, resDummy, nextDummy);
