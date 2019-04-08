@@ -1,9 +1,6 @@
-const identity = "x-amzn-oidc-identity";
-const accessToken = "x-amzn-oidc-identity";
-
 const headers = {
-    identity,
-    accessToken,
+    identity: "x-amzn-oidc-identity",
+    accessToken: "x-amzn-oidc-identity",
     jwt: "x-amzn-oidc-data"
 };
 
