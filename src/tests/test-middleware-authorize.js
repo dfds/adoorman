@@ -1,18 +1,6 @@
 import assert from "assert";
 import AuthorizeMiddleware from "./../components/middleware-authorize";
 
-Date.prototype.addMinutes = function(minutes) {
-    const timestamp = this.getTime();
-    const newTimestamp = timestamp+(minutes*60*1000);
-    return new Date(newTimestamp);
-}
-
-Date.prototype.subtractMinutes = function(minutes) {
-    const timestamp = this.getTime();
-    const newTimestamp = timestamp-(minutes*60*1000);
-    return new Date(newTimestamp);
-}
-
 const requestBuilder = (options) => {
     const defaults = {
         connection: {
@@ -221,7 +209,7 @@ describe("AuthorizeMiddleware", () => {
         assert.equal(wasNextInvoked, true, "Expected to call next");
     });
 
-    it("still attaches cookie to response when request has expected cookie", () => {
+    it("does NOT re-attach a cookie to response when request already has expected cookie", () => {
         const reqDummy = requestBuilder();
         const resDummy = responseBuilder();
         const nextDummy = () => { };
@@ -239,6 +227,49 @@ describe("AuthorizeMiddleware", () => {
 
         sut.handle(reqDummy, resDummy, nextDummy);
 
-        assert.equal(wasCookieAttached, true, "Expected to call next");
+        assert.equal(wasCookieAttached, false, "Not expecting to attach cookie");
+    });
+
+    it("does NOT re-attach a cookie to response when request already has expected cookie", () => {
+        const reqDummy = requestBuilder();
+        const resDummy = responseBuilder();
+        const nextDummy = () => { };
+        
+        let wasCookieAttached = false;
+        const cookieUtilsSpy = { 
+            hasValidAuthorizationCookie: () => true,
+            attachCookie: () => wasCookieAttached = true
+        };
+
+        const sut = sutBuilder({ 
+            isPassthrough: false,
+            cookieUtils: cookieUtilsSpy
+        });
+
+        sut.handle(reqDummy, resDummy, nextDummy);
+
+        assert.equal(wasCookieAttached, false, "Not expecting to attach cookie");
+    });
+
+    it("removes cookie if not authorized", () => {
+        const reqDummy = requestBuilder();
+        const resDummy = responseBuilder();
+        const nextDummy = () => { };
+        
+        let wasCookieRemoved = false;
+        const cookieUtilsSpy = { 
+            hasValidAuthorizationCookie: () => true,
+            removeCookie: () => wasCookieRemoved = true
+        };
+
+        const sut = sutBuilder({ 
+            isPassthrough: false,
+            authorizationService: { isAuthorized: () => false },
+            cookieUtils: cookieUtilsSpy
+        });
+
+        sut.handle(reqDummy, resDummy, nextDummy);
+
+        assert.equal(wasCookieRemoved, true, "Expected to remove cookie");
     });
 });

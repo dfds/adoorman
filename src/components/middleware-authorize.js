@@ -42,9 +42,12 @@ export default class AuthorizeMiddleware {
     }
 
     handle(req, res, next) {
-        if (this.isPassthrough) {
+        if (this.isPassthrough || this.hasValidAuthorizationCookie(req)) {
             next();
-        } else if (this.hasValidAuthorizationCookie(req) || this.isAuthorized(req)) {
+            return;
+        } 
+        
+        if (this.isAuthorized(req)) {
             next();
             this.attachCookie(req, res);
         } else {
