@@ -15,6 +15,7 @@ export default class AuthorizeMiddleware {
         this.hasValidAuthorizationCookie = this.hasValidAuthorizationCookie.bind(this);
         this.isAuthorized = this.isAuthorized.bind(this);
         this.attachCookie = this.attachCookie.bind(this);
+        this.removeCookie = this.removeCookie.bind(this);
         this.sendRejectResponse = this.sendRejectResponse.bind(this);
     }
 
@@ -24,6 +25,10 @@ export default class AuthorizeMiddleware {
 
     attachCookie(req, res) {
         this.cookieUtils.attachCookie(req, res);
+    }
+
+    removeCookie(req, res) {
+
     }
     
     sendRejectResponse(res) {

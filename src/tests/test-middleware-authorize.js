@@ -44,10 +44,6 @@ const sutBuilder = (options) => {
             getIdentityFrom: () => "foo-identity",
             getAccessTokenFrom: () => "foo-access-token"
         },
-        timeProvider: {
-            now: () => new Date(),
-            addMinutes: () => new Date(),
-        },
         cookieUtils: {
             attachCookie: () => { },
             hasValidAuthorizationCookie: () => false
@@ -55,6 +51,10 @@ const sutBuilder = (options) => {
     };
 
     options = {...defaults, ...options};
+
+    options.authorizationService = {...defaults.authorizationService, ...options.authorizationService};
+    options.requestUtils = {...defaults.requestUtils, ...options.requestUtils};
+    options.cookieUtils = {...defaults.cookieUtils, ...options.cookieUtils};
 
     return new AuthorizeMiddleware(options);
 };
@@ -82,10 +82,11 @@ describe("AuthorizeMiddleware", () => {
         const resDummy = responseBuilder();
         const nextDummy = () => {};
 
+        let wasInvoked = false;
+
         const authorizationServiceSpy = {
-            _wasInvoked: false,
             isAuthorized: function(req) { 
-                this._wasInvoked = true;
+                wasInvoked = true;
             },
         };
 
@@ -96,7 +97,7 @@ describe("AuthorizeMiddleware", () => {
 
         sut.handle(reqDummy, resDummy, nextDummy);
 
-        assert.equal(authorizationServiceSpy._wasInvoked, true, "Expected authorization service to be invoked");
+        assert.equal(wasInvoked, true, "Expected authorization service to be invoked");
     });
 
     it("invokes next when authorized", () => {
@@ -110,10 +111,6 @@ describe("AuthorizeMiddleware", () => {
             print: true,
             isPassthrough: false,
             authorizationService: { isAuthorized: () => true },
-            timeProvider: {
-                now: () => new Date(),
-                addMinutes: () => new Date(),
-            }
         });
         
         sut.handle(reqDummy, resDummy, nextSpy);
@@ -254,52 +251,4 @@ describe("AuthorizeMiddleware", () => {
 
         assert.equal(wasCookieAttached, true, "Expected to call next");
     });
-
-    // it("attaches expected cookie to response when authorized", () => {
-    //     const stubIdentity = "foo-identity";
-    //     const stubAccessToken = "foo-access-token";
-
-    //     const expectedExpirationDelayInMinutes = 10;
-    //     const expectedExpiration = new Date();
-    //     const expectedCookieElements = [
-    //         `${stubIdentity}=${stubAccessToken}`,
-    //         "path=/",
-    //         `expires=${expectedExpiration.toUTCString()}`,
-    //         "secure",
-    //         "httponly"
-    //     ];
-
-    //     const actualResponseHeaders = [];
-    //     const resSpy = responseBuilder({
-    //         setHeader: (name, value) => {
-    //             const result = {};
-    //             result[name] = value;
-    //             actualResponseHeaders.push(result);
-    //         },
-    //     });
-
-    //     const sut = sutBuilder({ 
-    //         isPassthrough: false,
-    //         authorizationService: { isAuthorized: () => true },
-    //         requestUtils: { 
-    //             getIdentityFrom: () => stubIdentity,
-    //             getAccessTokenFrom: () => stubAccessToken
-    //         },
-    //         timeProvider: { 
-    //             now: () => expectedExpiration.subtractMinutes(expectedExpirationDelayInMinutes),
-    //             addMinutes: () => expectedExpiration
-    //         }
-    //     });
-        
-    //     const reqDummy = requestBuilder();
-    //     const nextDummy = () => {};
-
-    //     sut.handle(reqDummy, resSpy, nextDummy);
-
-    //     const expectedCookieHeader = [
-    //         { "Set-Cookie": [ expectedCookieElements.join("; ")]},
-    //     ];
-
-    //     assert.deepEqual(actualResponseHeaders, expectedCookieHeader, `Expected ${JSON.stringify(expectedCookieHeader)} but got ${JSON.stringify(actualResponseHeaders)}`);
-    // });
 });
