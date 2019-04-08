@@ -23,16 +23,6 @@ export default class AuthorizeMiddleware {
     }
 
     attachCookie(req, res) {
-        // const identity = this.requestUtils.getIdentityFrom(req);
-        // const accessToken = this.requestUtils.getAccessTokenFrom(req);
-
-        // const now = this.timeProvider.now();
-
-        // const cookies = new Cookies(req, res, { secure: true });
-        // cookies.set(identity, accessToken, {
-        //     expires: this.timeProvider.addMinutes(now, 10)
-        // });
-
         this.cookieUtils.attachCookie(req, res);
     }
     
